@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <style>
+        html body {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+    <script src="js/d3-array@3.js"></script>
+    <script src="js/d3-geo@3.js"></script>
+    <script src="js/d3-geo-projection@4.js"></script>
+    <script src="js/dat.gui.min.js"></script> 
+    <script src="js/topojson-client.js"></script>
+<!-- 
+    <script src="/src/utils/OrbitControls.js"></script>
+   
+    <script src="/src/utils/EffectComposer.js"></script>
+    <script src="/src/utils/RenderPass.js"></script>
+    <script src="/src/utils/ShaderPass.js"></script>
+    <script src="/src/utils/CopyShader.js"></script>
+    <script src="/src/utils/AfterimagePass.js"></script>
+    <script src="/src/utils/AfterimageShader.js"></script>
+    <script src="/src/utils/OutlinePass.js"></script>
+    <script src="/src/utils/LightningStrike.js"></script>
+    <script src="/src/utils/LightningStorm.js"></script>
+    <script src="/src/utils/SimplexNoise.js"></script>
+    <script src="/src/utils/MarchingCubes.js"></script> -->
+   
+</head>
+
+<body>
+    <div style="position: absolute;top:0px;left:0px;z-index: 999999;">
+
+        <button onclick="qiuti();">球体</button>
+        <button onclick="pingmian();">平面</button>
+        <button onclick="baofeng();">暴风</button>
+        <button onclick="map3D();">3D地图</button>
+    </div>
+    <div style="position: absolute;top:26px;left:0px;z-index: 999999;">
+
+        <button onclick="pointsRender();">粒子渲染</button>
+        <button onclick="marchingCubeRender();">体渲染</button>
+        <button onclick="cutPlanePoints();">透视</button>
+    </div>
+   
+    <script src="js/config.js"></script>
+    <script src="/dist/iwmr.umd.js"></script>
+   
+    <script>
+        const main = new IWMR.MainScene(true);
+        const e3d = new IWMR.Earth3D();
+
+        let qiutiShow = 0;//让球体对象交替呈现。
+        let pingmianShow = 0;//让平面交替呈现
+        qiuti();
+        // pingmian();
+
+        function qiuti() {
+            if (qiutiShow == 0) {
+                //main.addObj(e3d.qiutiJW('Earth3D.qiuti'));
+                main.addObj(e3d.qiutiJWMercator('Earth3D.qiutiMercator'));
+            }
+            else {
+                main.hideObj('Earth3D.qiuti', (qiutiShow % 2 == 0) ? true : false);
+                main.hideObj('Earth3D.qiutiMercator', (qiutiShow % 2 == 0) ? true : false);
+            }
+            qiutiShow++;
+        }
+        function pingmian() {
+            let pjwName = 'Earth3D.pingmianJWMercator';
+            if (pingmianShow == 0) {
+                //main.addObj(e3d.pingmianJW('Earth3D.pingmianr')); 
+                main.addObj(e3d.pingmianJWMercator(pjwName));
+                if (main.gui == null) {
+                    main.gui = new dat.GUI();
+                }
+                main.gui.add(e3d.guiParams, 'currProjectionName', IWMR.Earth3D.projectionNames).name('平面投影').onChange((val) => {
+                    let group = main.scene.getObjectByName(pjwName).children;
+                    //用户限制渲染颜色区间
+                    main.delObj(pjwName);
+                    IWMR.Earth3D.currProjectionName = val;
+                    main.addObj(e3d.pingmianJWMercator(pjwName));
+                });
+            }
+            else {
+                //main.hideObj('Earth3D.pingmianr', (pingmianShow % 2 == 0) ? true : false);
+                main.hideObj(pjwName, (pingmianShow % 2 == 0) ? true : false);
+            }
+            pingmianShow++;
+
+        }
+        let baofengShow = true;
+        const baofeng1 = new IWMR.BaoFeng();
+        function baofeng() {
+            let passValue = 0.0;
+            if (baofengShow) {
+
+                main.addObj(baofeng1.create('baofeng1'), runBaofeng);
+                passValue = 0.7;
+                
+            }
+            else {
+
+                main.delObj('baofeng1');
+            }
+            main.composer.passes[1].uniforms['damp'] = { value: passValue };
+            baofengShow = !baofengShow;
+        }
+        function runBaofeng() {
+            baofeng1.process();
+        }
+        let map3DShow = 0;
+        function map3D() {
+            if (map3DShow == 0) {
+                main.addObj(e3d.map3D('Earth3D.map3D', main));
+
+            }
+            else {
+                main.hideObj('Earth3D.map3D', (map3DShow % 2 == 0) ? true : false);
+
+            }
+            map3DShow++;
+        }
+
+        const vr = new IWMR.VR();
+        let pointsRenderShow = 0;
+        function pointsRender() {
+            if (pointsRenderShow == 0) {
+                main.addObj(vr.pointsFill('pointsFill', main));
+
+            }
+            else {
+                main.hideObj('pointsFill', (pointsRenderShow % 2 == 0) ? true : false);
+            }
+            pointsRenderShow++;
+        }
+
+        let marchingCubeShow = 0;
+
+        function marchingCubeRender() {
+            if (marchingCubeShow == 0) {
+                main.addObj(vr.marchingCube('marchingCube'));
+            }
+            else {
+                main.hideObj('marchingCube', (marchingCubeShow % 2 == 0) ? true : false);
+            }
+            marchingCubeShow++;
+        }
+        let cpShow = 0;
+
+        const cp = new IWMR.CutPlane();
+        function cutPlanePoints() {
+
+            if (cpShow == 0) {
+                var geometryGroup = main.scene.getObjectByName('marchingCube');
+
+                const meshs = geometryGroup.children;
+                for (var i in meshs) {
+                    main.addObj(cp.create('cutPlanePoints', meshs[i], main.gui));
+                }
+                var pointsGroup = main.scene.getObjectByName('pointsFill');
+                main.addObj(cp.create('cutPlanePoints', pointsGroup.children[0], main.gui));
+
+            }
+            else {
+                main.hideObj('cutPlanePoints', (cpShow % 2 == 0) ? true : false);
+            }
+            cpShow++;
+        }
+
+    </script>
+</body>
+
+</html>

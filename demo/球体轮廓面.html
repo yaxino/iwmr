@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <style>
+        html body {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+
+    <script src="/src/utils/three.min.js"></script>
+    <script src="/src/utils/OrbitControls.js"></script>
+
+    <script src="/src/utils/EffectComposer.js"></script>
+    <script src="/src/utils/RenderPass.js"></script>
+    <script src="/src/utils/ShaderPass.js"></script>
+    <script src="/src/utils/CopyShader.js"></script>
+    <script src="/src/utils/AfterimagePass.js"></script>
+    <script src="/src/utils/AfterimageShader.js"></script>
+
+
+</head>
+
+<body>
+    <div style="position: absolute;top:0px;left:0px;z-index: 999999;">
+
+        <button onclick="qiuti();">球体</button>
+        <button onclick="pingmian();">平面</button>
+        <button onclick="baofeng();">暴风</button>
+    </div>
+    <div style="position: absolute;top:26px;left:0px;z-index: 999999;">
+
+        <button onclick="pointsRender();">粒子渲染</button>
+        <button onclick="marchingCubeRender();">体渲染</button>
+        <button onclick="cutPlanePoints();">透视</button>
+    </div>
+
+    <script src="/src/utils/config.js"></script>
+    <script type="x-shader/x-vertex" id="vertexshader">
+
+        varying vec2 vUv;
+
+        void main() {
+
+            vUv = uv;
+
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+        }
+
+    </script>
+
+    <script type="x-shader/x-fragment" id="fragmentshader">
+
+        uniform sampler2D baseTexture;
+        uniform sampler2D bloomTexture;
+
+        varying vec2 vUv;
+
+        void main() {
+
+            gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
+
+        }
+
+    </script>
+
+
+    <script>
+       
+
+        var div = MAIN_DIV;
+        var renderer1 = new THREE.WebGLRenderer({ antialias: true });
+        renderer1.setPixelRatio(window.devicePixelRatio);
+        renderer1.setSize(div.offsetWidth, div.offsetHeight);
+        renderer1.localClippingEnabled = true;
+        div.appendChild(renderer1.domElement);
+        //scene1
+        var scene1 = new THREE.Scene();
+        var camera1 = new THREE.PerspectiveCamera(CAMERA_FOV, CAMERA_ASPECT, CAMERA_NEAR, CAMERA_FAR);
+        var ambientLight1 = new THREE.AmbientLight(COLOR_WHITE); // 环境光,白光 
+        camera1.position.set(15, 15, 100);
+        var axes = new THREE.AxesHelper(AXES_SIZE);
+        scene1.add(axes);
+        scene1.add(ambientLight1);
+        const geometry1 = new THREE.BoxGeometry(30, 20, 10);
+        //const material1 = new THREE.MeshLambertMaterial({ color: 'blue' });
+        const ms = [
+        new THREE.MeshLambertMaterial({ color: 'blue' }),
+        new THREE.MeshLambertMaterial({ color: 'red' }),
+        new THREE.MeshLambertMaterial({ color: 'green' }),
+        new THREE.MeshLambertMaterial({ color: 'gray' }),
+        new THREE.MeshLambertMaterial({ color: 'yellow' }),
+        new THREE.MeshLambertMaterial({ color: 'white' }),
+        ];
+
+        const cylinder1 = new THREE.Mesh(geometry1, ms);
+        cylinder1.position.set(-3, 0, 0);
+        scene1.add(cylinder1);
+        var control1 = new THREE.OrbitControls(camera1, renderer1.domElement);//添加鼠标滚动缩放，旋转对象
+        control1.mouseButtons = {
+            LEFT: THREE.MOUSE.PAN,
+            MIDDLE: THREE.MOUSE.DOLLY,
+            RIGHT: THREE.MOUSE.ROTATE
+        }
+        //end:sence1
+
+        //scene1
+
+
+ 
+        //end:sence2
+       var target2 = new THREE.WebGLRenderTarget(window.innerWidth/2, window.innerHeight/2);
+       
+       
+       const geometry2 = new THREE.SphereBufferGeometry(3, 36, 12);
+       const material2 = new THREE.ShaderMaterial({
+                uniforms: {
+                    baseTexture: { value: null },
+                    bloomTexture: { value: target2.texture }
+                },
+                vertexShader: document.getElementById('vertexshader').textContent,
+                fragmentShader: document.getElementById('fragmentshader').textContent,
+                defines: {}
+            })
+        // const material2 = new THREE.MeshPhongMaterial({ color: 'red', map:target2.texture });
+        const cylinder2 = new THREE.Mesh(geometry2, material2);
+        cylinder2.position.set(3, 0, 0);
+       
+        scene1.add(cylinder2);
+
+        // var finalComposer = new THREE.EffectComposer(renderer1);
+        // var renderPass2 = new THREE.RenderPass(scene1, camera1);
+        // const finalPass = new THREE.ShaderPass(
+        //     new THREE.ShaderMaterial({
+        //         uniforms: {
+        //             baseTexture: { value: null },
+        //             bloomTexture: { value: target2.texture }
+        //         },
+        //         vertexShader: document.getElementById('vertexshader').textContent,
+        //         fragmentShader: document.getElementById('fragmentshader').textContent,
+        //         defines: {}
+        //     }), 'baseTexture'
+        // );
+        // finalPass.needsSwap = true;
+        // finalComposer.addPass(renderPass2);
+        // finalComposer.addPass(finalPass);
+
+        animate();
+
+        //外部loop 动画方法
+        function animate() {
+            requestAnimationFrame(animate);
+            // cylinder2.rotateY(0.05);
+            cylinder1.rotateX(0.05);
+            // cylinder1.visible = false;
+            cylinder1.visible = true;
+            cylinder2.visible = false;
+            renderer1.setRenderTarget(target2);
+            renderer1.render(scene1, camera1);
+            cylinder1.visible = false;
+            cylinder2.visible = true;
+            renderer1.setRenderTarget(null);
+            renderer1.render(scene1, camera1);
+        }
+        function toggleGeo1(show){
+            cylinder1.visible = show;
+        }
+    </script>
+</body>
+
+</html>
